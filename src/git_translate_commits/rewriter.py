@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import subprocess
-import tempfile
 from pathlib import Path
 
 from .models import TranslationResult
@@ -54,22 +53,27 @@ class GitRewriter:
             self._rewrite_with_filter_branch(message_map)
 
     def _rewrite_with_filter_repo(self, message_map: dict[str, str]) -> None:
-        """Rewrite using git-filter-repo with a message callback script."""
-        callback_script = self._generate_filter_repo_callback(message_map)
-
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False, dir=self.repo_path
-        ) as f:
-            f.write(callback_script)
-            callback_path = f.name
+        """Rewrite using git-filter-repo with a commit callback."""
+        map_file = self.repo_path / ".git" / "rewrite-map.json"
+        map_file.write_text(json.dumps(message_map, ensure_ascii=False))
 
         try:
+            # --commit-callback receives a `commit` object with .original_id
+            # (original hex SHA as bytes) and .message (bytes).
+            callback = (
+                "import json\n"
+                f"with open('{map_file}') as _f: _map = json.load(_f)\n"
+                "oid = commit.original_id.decode('ascii') if commit.original_id else ''\n"
+                "if oid in _map:\n"
+                "    commit.message = _map[oid].encode('utf-8')\n"
+            )
+
             cmd = [
                 "git",
                 "filter-repo",
                 "--force",
-                "--message-callback",
-                self._inline_callback(message_map),
+                "--commit-callback",
+                callback,
             ]
 
             if self.verbose:
@@ -88,25 +92,7 @@ class GitRewriter:
                     f"git filter-repo failed (exit {result.returncode}):\n{result.stderr}"
                 )
         finally:
-            Path(callback_path).unlink(missing_ok=True)
-
-    @staticmethod
-    def _inline_callback(message_map: dict[str, str]) -> str:
-        """Generate an inline Python expression for git-filter-repo --message-callback."""
-        # git-filter-repo passes `message` as bytes; we need to decode, check, and re-encode.
-        # The callback has access to `message` (bytes) and must return bytes.
-        escaped_map = {}
-        for hash_prefix, new_msg in message_map.items():
-            # Use first 12 chars of hash for matching in the replacement map
-            escaped_map[hash_prefix[:12]] = new_msg
-
-        map_json = json.dumps(escaped_map, ensure_ascii=False)
-        return (
-            f"import json\\n"
-            f"MAP = json.loads('''{map_json}''')\\n"
-            f"# This won't work inline; use replace-message approach instead\\n"
-            f"return message"
-        )
+            map_file.unlink(missing_ok=True)
 
     def _rewrite_with_filter_branch(self, message_map: dict[str, str]) -> None:
         """Rewrite using git filter-branch with --msg-filter."""
