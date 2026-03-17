@@ -10,10 +10,10 @@ readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
 requires-python = ">=3.10"
 authors = [
-    { name = "Fernando Paladini", email = "fernando@paladini.dev" },
+    { name = "Fernando Paladini", email = "fnpaladini+git-translate-commits@gmail.com" },
 ]
 maintainers = [
-    { name = "Fernando Paladini", email = "fernando@paladini.dev" },
+    { name = "Fernando Paladini", email = "fnpaladini+git-translate-commits@gmail.com" },
 ]
 keywords = ["git", "commit", "translation", "llm", "i18n"]
 classifiers = [

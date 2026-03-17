@@ -11,7 +11,7 @@
 If you discover a security vulnerability, please report it responsibly:
 
 1. **Do NOT open a public issue.**
-2. Email **fernando@paladini.dev** with details of the vulnerability.
+2. Email **fnpaladini+git-translate-commits@gmail.com** with details of the vulnerability.
 3. Include steps to reproduce, if possible.
 4. Allow reasonable time for a fix before public disclosure.
 
